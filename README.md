@@ -1,172 +1,83 @@
-# EventHub – Event Management API
+# EventHub
 
-A production-grade Spring Boot REST API for managing events and user registrations, designed to demonstrate mid-level Java API development maturity.
+EventHub is a Spring Boot REST API for managing events and registrations, built as a portfolio project to demonstrate mid-level (Pleno) Java API development skills: layered architecture, DTO/mapper conventions, Flyway-managed schema, and centralized error handling.
 
-## Overview
+**Domain:** organizers create events; attendees register to attend.
 
-EventHub is an event management platform where **organizers** create events and sessions, and **attendees** register to attend. The API provides full CRUD operations for users, events, and (later) sessions and registrations.
+**Status:** User & Event CRUD complete. JWT authentication in progress. Sessions & Registrations endpoints planned next — see [CLAUDE.md](CLAUDE.md) for the full roadmap.
 
-**Status:** Core API complete (User & Event endpoints); JWT authentication in progress.
+## Run EventHub locally
 
----
+EventHub is a [Spring Boot](https://spring.io/guides/gs/spring-boot) application built with [Gradle](https://spring.io/guides/gs/gradle/), backed by PostgreSQL. Java 21 is required for the build, and Docker is required to run Postgres.
 
-## Quick Start
+You first need to clone the project locally:
 
-### Prerequisites
+```bash
+git clone git@github.com:PedroASNegrao/eventhub.git
+cd eventhub
+```
 
-- **Java 21** (portable version at `/home/pedro/.jdks/jdk-21.0.11+10` or system-installed)
-- **Docker & Docker Compose** (for Postgres)
-- **Gradle 9.x** (bundled in `backend/gradlew`)
+Start Postgres:
 
-### Setup & Run
+```bash
+docker compose up -d db
+```
 
-1. **Start the database:**
-   ```bash
-   docker compose up -d
-   ```
-   Postgres will run on `localhost:5433` (not 5432 — port conflict with another project).
-   
-   Database files are persisted in `postgres_data/` at the project root.
+Then run the application from the `backend` directory:
 
-2. **Build the backend:**
-   ```bash
-   cd backend
-   JAVA_HOME=/home/pedro/.jdks/jdk-21.0.11+10 ./gradlew build
-   ```
-   (Omit `JAVA_HOME=...` if Java 21 is already on your `$PATH`.)
+```bash
+cd backend
+./gradlew bootRun
+```
 
-3. **Run the application:**
-   ```bash
-   JAVA_HOME=/home/pedro/.jdks/jdk-21.0.11+10 ./gradlew bootRun
-   ```
+(If Java 21 isn't on your `$PATH`, prefix with `JAVA_HOME=/path/to/jdk-21`.)
 
-4. **The API is now available at:**
-   ```
-   http://localhost:8080
-   ```
+You can then access the API at <http://localhost:8080>.
 
-### Run everything with Docker (app + Postgres)
-
-No local JDK/Gradle setup needed — this builds the API image and starts it alongside Postgres:
+Or run the full stack — app and Postgres together, no local JDK/Gradle needed:
 
 ```bash
 docker compose up -d --build
 ```
 
-The API is available at `http://localhost:8080`; Postgres is still exposed on `localhost:5433` for inspection. To stop:
+## Database configuration
 
-```bash
-docker compose down
-```
+In its default configuration, EventHub connects to PostgreSQL at `jdbc:postgresql://localhost:5433/eventhub_db` (credentials `admin`/`admin123`), as set in `docker-compose.yml` and `backend/src/main/resources/application.yml`. Port `5433` is used instead of the default `5432` to avoid clashing with another local project's Postgres instance.
 
-### Deploying to a cloud environment
+Schema is managed entirely by [Flyway](backend/src/main/resources/db/migration) migrations under `backend/src/main/resources/db/migration/` — Hibernate only validates the schema (`ddl-auto: validate`), it never generates or alters tables.
 
-The backend image (`backend/Dockerfile`) is self-contained and reads its database connection from environment variables, so it runs the same way locally or in the cloud:
+Database files persist in `postgres_data/` at the project root (a Docker bind mount), so they survive container restarts and can be inspected directly on disk.
+
+For cloud deployment, the same image (`backend/Dockerfile`) reads its datasource from environment variables instead of `application.yml` defaults:
 
 | Variable | Purpose |
-|----------|---------|
-| `SPRING_DATASOURCE_URL` | JDBC URL of the Postgres instance (e.g. a managed cloud database) |
+|---|---|
+| `SPRING_DATASOURCE_URL` | JDBC URL of the target Postgres instance |
 | `SPRING_DATASOURCE_USERNAME` | Database username |
 | `SPRING_DATASOURCE_PASSWORD` | Database password |
 | `SERVER_PORT` | Port the app listens on (defaults to `8080`) |
 
-Build and push the image, then run it on any container platform (Render, Railway, Fly.io, ECS, etc.) with those variables pointed at your cloud Postgres instance:
-
-```bash
-docker build -t eventhub-app backend/
-docker run -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/<db> \
-  -e SPRING_DATASOURCE_USERNAME=<user> \
-  -e SPRING_DATASOURCE_PASSWORD=<password> \
-  eventhub-app
-```
-
-Flyway migrations run automatically on startup against whatever database is configured.
-
----
-
-## API Endpoints
+## API
 
 ### Users
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/users` | Create a new user (organizer or attendee) |
-| GET | `/api/users/{id}` | Retrieve a user by ID |
-| GET | `/api/users` | List all users |
-
-**Create User (POST /api/users)**
-
-```json
-{
-  "name": "John Organizer",
-  "email": "john@example.com",
-  "password": "securePassword123",
-  "role": "ORGANIZER"
-}
-```
-
-Response: `201 Created`
-```json
-{
-  "id": 1,
-  "name": "John Organizer",
-  "email": "john@example.com",
-  "role": "ORGANIZER"
-}
-```
-
-Errors:
-- `409 Conflict` — Email already registered (`EmailAlreadyExistsException`)
-- `400 Bad Request` — Validation failed (missing/invalid fields)
-
----
+|---|---|---|
+| `POST` | `/api/users` | Create a user (`ORGANIZER` or `ATTENDEE`) |
+| `GET` | `/api/users/{id}` | Retrieve a user by ID |
+| `GET` | `/api/users` | List all users |
 
 ### Events
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/events` | Create a new event (organizer only) |
-| GET | `/api/events/{id}` | Retrieve an event by ID |
-| GET | `/api/events` | List all events |
-
-**Create Event (POST /api/events)**
-
-```json
-{
-  "title": "Spring Boot Workshop",
-  "description": "Learn Spring Boot best practices",
-  "organizerId": 1,
-  "date": "2026-07-15T10:00:00",
-  "location": "São Paulo, SP"
-}
-```
-
-Response: `201 Created`
-```json
-{
-  "id": 1,
-  "title": "Spring Boot Workshop",
-  "description": "Learn Spring Boot best practices",
-  "organizerId": 1,
-  "date": "2026-07-15T10:00:00",
-  "location": "São Paulo, SP",
-  "createdAt": "2026-06-27T12:30:00"
-}
-```
-
-Errors:
-- `404 Not Found` — Organizer (organizerId) does not exist
-- `400 Bad Request` — Validation failed
-- `500 Internal Server Error` — Unexpected error
-
----
+|---|---|---|
+| `POST` | `/api/events` | Create an event |
+| `GET` | `/api/events/{id}` | Retrieve an event by ID |
+| `GET` | `/api/events` | List all events |
 
 ### Sessions & Registrations
 
-**Not yet implemented.** Database schema exists (Flyway V2, V3); endpoints are planned for post-JWT phase.
-
----
+Not yet implemented. The Flyway schema exists (`V2`, `V3`); entities and endpoints are planned for the post-JWT phase.
 
 ## Error Handling
 
@@ -193,7 +104,7 @@ For validation errors (400):
 }
 ```
 
----
+Errors follow this shape across all endpoints — `404` for missing resources, `409` for duplicate emails, `400` with field-level detail for validation failures — via `GlobalExceptionHandler`.
 
 ## Architecture
 
@@ -217,8 +128,6 @@ For validation errors (400):
 - **Mappers:** MapStruct-based entity ↔ DTO conversion (zero manual boilerplate)
 - **Exception Handling:** Centralized `GlobalExceptionHandler` catches all exceptions and returns consistent 4xx/5xx responses
 - **Database Migrations:** Flyway versioned SQL migrations in `src/main/resources/db/migration/`
-
----
 
 ## Database Schema
 
@@ -272,8 +181,6 @@ CREATE TABLE registrations (
 
 Flyway automatically applies these migrations on startup (configured in `application.yml`).
 
----
-
 ## Configuration
 
 ### application.yml
@@ -314,8 +221,6 @@ services:
 ```
 
 **Persistent Storage:** Database files are stored in the `postgres_data/` directory at the project root. This bind mount persists data across container restarts.
-
----
 
 ## Project Structure
 
@@ -371,8 +276,6 @@ eventhub/
 └── .gitignore
 ```
 
----
-
 ## Development Notes
 
 ### Key Technologies
@@ -390,8 +293,6 @@ eventhub/
 - **Mapper Pattern** — MapStruct handles entity ↔ DTO conversion without boilerplate
 - **Service Pattern** — Business logic isolated in service layer
 - **Global Exception Handler** — Centralized error responses across all endpoints
-
----
 
 ## Next Steps
 
@@ -413,8 +314,6 @@ eventhub/
 - Unit tests for services (mock repositories)
 - Integration tests for controllers (MockMvc + test database)
 - Testcontainers for Postgres in CI/CD
-
----
 
 ## Troubleshooting
 
@@ -458,27 +357,26 @@ docker compose up -d
 # Flyway will re-apply all migrations
 ```
 
----
+## Looking for something in particular?
+
+| Concern | Class or file |
+|---|---|
+| Application entry point | [EventHubApplication](backend/src/main/java/com/eventhub/EventHubApplication.java) |
+| Security configuration | [SecurityConfig](backend/src/main/java/com/eventhub/config/SecurityConfig.java) |
+| Event endpoints | [EventController](backend/src/main/java/com/eventhub/controller/EventController.java) |
+| User endpoints | [UserController](backend/src/main/java/com/eventhub/controller/UserController.java) |
+| Event business logic | [EventService](backend/src/main/java/com/eventhub/service/EventService.java) |
+| User business logic | [UserService](backend/src/main/java/com/eventhub/service/UserService.java) |
+| Entity ↔ DTO mapping | [EventMapper](backend/src/main/java/com/eventhub/mapper/EventMapper.java), [UserMapper](backend/src/main/java/com/eventhub/mapper/UserMapper.java) |
+| Centralized error handling | [GlobalExceptionHandler](backend/src/main/java/com/eventhub/exception/GlobalExceptionHandler.java) |
+| Schema migrations | [db/migration](backend/src/main/resources/db/migration) |
+| Application config | [application.yml](backend/src/main/resources/application.yml) |
 
 ## Contributing
 
-This is a portfolio project. Code style follows clean architecture principles:
-- Lean layers (no unnecessary facades/factories)
-- Immutable DTOs (Java records)
-- MapStruct for mapping (no manual converters)
-- Global exception handling (consistent error responses)
-
-For detailed development guidelines, see [CLAUDE.md](CLAUDE.md).
-
----
+This is a portfolio project, not an actively maintained open-source one, so it isn't accepting outside contributions.
 
 ## License
 
 Portfolio project. Not licensed for redistribution.
 
----
-
-## Author
-
-Built as a demonstration for mid-level (Pleno) Java API developer interviews.  
-**Contact:** convidaprototipo@gmail.com
