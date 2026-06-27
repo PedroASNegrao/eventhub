@@ -183,7 +183,6 @@ All code lives under `com.eventhub.*`:
 - **Session & Registration entities:** Build `Session`, `Registration` JPA entities and DTOs; implement `SessionService`, `RegistrationService`
 - **Session & Registration endpoints:** CRUD endpoints for sessions and event registrations
 - **Unit & integration tests:** @SpringBootTest, MockMvc, testcontainers for Postgres
-- **Angular 17+ frontend:** (in separate repo or `frontend/` directory TBD)
 
 ---
 

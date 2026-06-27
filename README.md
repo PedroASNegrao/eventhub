@@ -414,12 +414,6 @@ eventhub/
 - Integration tests for controllers (MockMvc + test database)
 - Testcontainers for Postgres in CI/CD
 
-### Phase: Frontend
-
-- Angular 17+ single-page application
-- OAuth2/JWT client integration
-- Event listing, creation, and registration UI
-
 ---
 
 ## Troubleshooting
