@@ -35,6 +35,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Maps invalid login credentials or refresh tokens to a 401 response.
+     */
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponseDTO> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+    }
+
+    /**
      * Maps bean validation failures to a 400 response listing each invalid field.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

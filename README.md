@@ -1,10 +1,10 @@
 # EventHub
 
-EventHub is a Spring Boot REST API for managing events and registrations, built as a portfolio project to demonstrate mid-level (Pleno) Java API development skills: layered architecture, DTO/mapper conventions, Flyway-managed schema, and centralized error handling.
+EventHub is a Spring Boot REST API for managing events and registrations, built as a portfolio project Java API development.
 
 **Domain:** organizers create events; attendees register to attend.
 
-**Status:** User & Event CRUD complete. JWT authentication in progress. Sessions & Registrations endpoints planned next — see [CLAUDE.md](CLAUDE.md) for the full roadmap.
+**Status:** User & Event CRUD complete. Spring Security + JWT authentication complete. Sessions & Registrations endpoints planned next.
 
 ## Run EventHub locally
 
@@ -59,25 +59,34 @@ For cloud deployment, the same image (`backend/Dockerfile`) reads its datasource
 
 ## API
 
+### Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Exchange email/password for an access + refresh token pair |
+| `POST` | `/api/auth/refresh` | Exchange a valid refresh token for a new token pair |
+
+Send the access token as `Authorization: Bearer <token>` on subsequent requests. Tokens are signed JWTs (HS256) carrying the user's email, id, and role; access tokens expire after 15 minutes, refresh tokens after 7 days (both configurable via `JWT_ACCESS_EXPIRATION` / `JWT_REFRESH_EXPIRATION`).
+
 ### Users
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/users` | Create a user (`ORGANIZER` or `ATTENDEE`) |
-| `GET` | `/api/users/{id}` | Retrieve a user by ID |
-| `GET` | `/api/users` | List all users |
+| `POST` | `/api/users` | Create a user (`ORGANIZER` or `ATTENDEE`) — public, used for signup |
+| `GET` | `/api/users/{id}` | Retrieve a user by ID — requires authentication |
+| `GET` | `/api/users` | List all users — requires authentication |
 
 ### Events
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/events` | Create an event |
-| `GET` | `/api/events/{id}` | Retrieve an event by ID |
-| `GET` | `/api/events` | List all events |
+| `POST` | `/api/events` | Create an event — requires the `ORGANIZER` role |
+| `GET` | `/api/events/{id}` | Retrieve an event by ID — requires authentication |
+| `GET` | `/api/events` | List all events — requires authentication |
 
 ### Sessions & Registrations
 
-Not yet implemented. The Flyway schema exists (`V2`, `V3`); entities and endpoints are planned for the post-JWT phase.
+Not yet implemented. The Flyway schema exists (`V2`, `V3`); entities and endpoints are planned next.
 
 ## Error Handling
 
@@ -128,6 +137,7 @@ Errors follow this shape across all endpoints — `404` for missing resources, `
 - **Mappers:** MapStruct-based entity ↔ DTO conversion (zero manual boilerplate)
 - **Exception Handling:** Centralized `GlobalExceptionHandler` catches all exceptions and returns consistent 4xx/5xx responses
 - **Database Migrations:** Flyway versioned SQL migrations in `src/main/resources/db/migration/`
+- **Security:** Stateless JWT authentication — `JwtAuthenticationFilter` authenticates each request from the bearer token's claims; `@PreAuthorize` enforces role checks per endpoint
 
 ## Database Schema
 
@@ -202,6 +212,11 @@ spring:
 
 server:
   port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:...}                          # HS256 key; override in production
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}     # 15 minutes, in ms
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days, in ms
 ```
 
 ### Docker Compose (docker-compose.yml)
@@ -232,11 +247,19 @@ eventhub/
 │   │   ├── java/com/eventhub/
 │   │   │   ├── EventHubApplication.java   # Main entry point
 │   │   │   ├── config/
-│   │   │   │   └── SecurityConfig.java    # Spring Security (temp: permissive)
+│   │   │   │   └── SecurityConfig.java    # Stateless JWT security filter chain
+│   │   │   ├── security/
+│   │   │   │   ├── JwtService.java               # Token issuing & parsing
+│   │   │   │   ├── JwtAuthenticationFilter.java  # Authenticates requests from bearer tokens
+│   │   │   │   ├── JwtAuthenticationEntryPoint.java  # 401 JSON response
+│   │   │   │   ├── JwtAccessDeniedHandler.java       # 403 JSON response
+│   │   │   │   └── TokenType.java
 │   │   │   ├── controller/
+│   │   │   │   ├── AuthController.java
 │   │   │   │   ├── EventController.java
 │   │   │   │   └── UserController.java
 │   │   │   ├── service/
+│   │   │   │   ├── AuthService.java
 │   │   │   │   ├── EventService.java
 │   │   │   │   └── UserService.java
 │   │   │   ├── repository/
@@ -253,11 +276,15 @@ eventhub/
 │   │   │   │   ├── EventRequestDTO.java
 │   │   │   │   ├── EventResponseDTO.java
 │   │   │   │   ├── UserRequestDTO.java
-│   │   │   │   └── UserResponseDTO.java
+│   │   │   │   ├── UserResponseDTO.java
+│   │   │   │   ├── LoginRequestDTO.java
+│   │   │   │   ├── RefreshRequestDTO.java
+│   │   │   │   └── TokenResponseDTO.java
 │   │   │   └── exception/
 │   │   │       ├── GlobalExceptionHandler.java
 │   │   │       ├── ResourceNotFoundException.java
 │   │   │       ├── EmailAlreadyExistsException.java
+│   │   │       ├── InvalidCredentialsException.java
 │   │   │       ├── ErrorResponseDTO.java
 │   │   │       └── ValidationErrorResponseDTO.java
 │   │   └── resources/
@@ -295,13 +322,6 @@ eventhub/
 - **Global Exception Handler** — Centralized error responses across all endpoints
 
 ## Next Steps
-
-### Phase: Spring Security + JWT
-
-- Login endpoint: `POST /api/auth/login` (email/password → JWT)
-- JWT validation filter: Extract & verify bearer token from request
-- Role-based access control: `@PreAuthorize("hasRole(...)")` on endpoints
-- Token refresh (optional): `POST /api/auth/refresh`
 
 ### Phase: Sessions & Registrations
 
@@ -363,6 +383,9 @@ docker compose up -d
 |---|---|
 | Application entry point | [EventHubApplication](backend/src/main/java/com/eventhub/EventHubApplication.java) |
 | Security configuration | [SecurityConfig](backend/src/main/java/com/eventhub/config/SecurityConfig.java) |
+| JWT issuing & parsing | [JwtService](backend/src/main/java/com/eventhub/security/JwtService.java) |
+| JWT request authentication | [JwtAuthenticationFilter](backend/src/main/java/com/eventhub/security/JwtAuthenticationFilter.java) |
+| Auth endpoints | [AuthController](backend/src/main/java/com/eventhub/controller/AuthController.java) |
 | Event endpoints | [EventController](backend/src/main/java/com/eventhub/controller/EventController.java) |
 | User endpoints | [UserController](backend/src/main/java/com/eventhub/controller/UserController.java) |
 | Event business logic | [EventService](backend/src/main/java/com/eventhub/service/EventService.java) |
@@ -371,12 +394,4 @@ docker compose up -d
 | Centralized error handling | [GlobalExceptionHandler](backend/src/main/java/com/eventhub/exception/GlobalExceptionHandler.java) |
 | Schema migrations | [db/migration](backend/src/main/resources/db/migration) |
 | Application config | [application.yml](backend/src/main/resources/application.yml) |
-
-## Contributing
-
-This is a portfolio project, not an actively maintained open-source one, so it isn't accepting outside contributions.
-
-## License
-
-Portfolio project. Not licensed for redistribution.
 
