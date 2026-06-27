@@ -2,9 +2,9 @@ spring:
   application:
     name: eventhub
   datasource:
-    url: jdbc:postgresql://localhost:5433/eventhub_db
-    username: admin
-    password: admin123
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/eventhub_db}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -20,4 +20,4 @@ spring:
     baseline-on-migrate: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
