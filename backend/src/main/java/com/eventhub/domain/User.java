@@ -23,6 +23,10 @@ import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * JPA entity mapping to the {@code users} table. A user is either an event organizer
+ * or an attendee, as defined by {@link UserRole}.
+ */
 @Entity
 @Table(name = "users")
 @Getter

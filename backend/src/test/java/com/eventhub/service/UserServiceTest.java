@@ -27,6 +27,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link UserService}, with the repository, mapper, and password
+ * encoder mocked out.
+ */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
@@ -57,6 +61,10 @@ class UserServiceTest {
                 .build();
     }
 
+    /**
+     * Verifies that creating a user hashes the raw password, persists the user, and
+     * returns the mapped response.
+     */
     @Test
     void createUser_savesEncodedPasswordAndReturnsResponse() {
         UserResponseDTO expectedResponse = new UserResponseDTO(user.getId(), user.getName(), user.getEmail(), user.getRole());
@@ -72,6 +80,9 @@ class UserServiceTest {
         verify(userRepository).save(user);
     }
 
+    /**
+     * Verifies that creating a user with a duplicate email fails fast without persisting.
+     */
     @Test
     void createUser_throwsWhenEmailAlreadyExists() {
         when(userRepository.existsByEmail(requestDTO.email())).thenReturn(true);
@@ -83,6 +94,9 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /**
+     * Verifies that fetching a user by id returns the mapped response when found.
+     */
     @Test
     void getUserById_returnsMappedUser() {
         UserResponseDTO expectedResponse = new UserResponseDTO(user.getId(), user.getName(), user.getEmail(), user.getRole());
@@ -94,6 +108,9 @@ class UserServiceTest {
         assertThat(result).isEqualTo(expectedResponse);
     }
 
+    /**
+     * Verifies that fetching a non-existent user by id throws.
+     */
     @Test
     void getUserById_throwsWhenNotFound() {
         UUID id = UUID.randomUUID();
@@ -104,6 +121,9 @@ class UserServiceTest {
                 .hasMessageContaining(id.toString());
     }
 
+    /**
+     * Verifies that fetching all users returns the mapped list from the repository.
+     */
     @Test
     void getAllUsers_returnsMappedList() {
         UserResponseDTO expectedResponse = new UserResponseDTO(user.getId(), user.getName(), user.getEmail(), user.getRole());

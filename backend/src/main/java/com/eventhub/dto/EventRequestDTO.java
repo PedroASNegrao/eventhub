@@ -8,6 +8,9 @@ import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * Request payload for creating an event.
+ */
 public record EventRequestDTO(
         @NotBlank(message = "Title is required")
         @Size(max = 200, message = "Title must be at most 200 characters")

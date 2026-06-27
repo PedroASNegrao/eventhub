@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Business logic for creating and retrieving users.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -23,6 +26,11 @@ public class UserService {
     private final UserMapper mapper;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Creates a new user, hashing the raw password before persistence.
+     *
+     * @throws com.eventhub.exception.EmailAlreadyExistsException if the email is already registered
+     */
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO dto) {
         if (userRepository.existsByEmail(dto.email())) {
@@ -36,6 +44,9 @@ public class UserService {
         return mapper.toUserResponseDTO(user);
     }
 
+    /**
+     * Returns all users.
+     */
     @Transactional(readOnly = true)
     public List<UserResponseDTO> getAllUsers() {
         return userRepository.findAll().stream()
@@ -43,6 +54,11 @@ public class UserService {
                 .toList();
     }
 
+    /**
+     * Returns a single user by id.
+     *
+     * @throws com.eventhub.exception.ResourceNotFoundException if no user matches the id
+     */
     @Transactional(readOnly = true)
     public UserResponseDTO getUserById(UUID id) {
         User user = userRepository.findById(id)

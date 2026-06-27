@@ -6,6 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Request payload for creating a user. The raw password is hashed before persistence.
+ */
 public record UserRequestDTO(
         @NotBlank(message = "Name is required")
         @Size(max = 100, message = "Name must be at most 100 characters")

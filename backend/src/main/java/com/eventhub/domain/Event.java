@@ -22,6 +22,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * JPA entity mapping to the {@code events} table. Each event is created by exactly one
+ * organizer ({@link User}).
+ */
 @Entity
 @Table(name = "events")
 @Getter

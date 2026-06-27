@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Business logic for creating and retrieving events.
+ */
 @Service
 @RequiredArgsConstructor
 public class EventService {
@@ -23,6 +26,11 @@ public class EventService {
     private final UserRepository userRepository;
     private final EventMapper mapper;
 
+    /**
+     * Creates an event for the organizer referenced in the request.
+     *
+     * @throws com.eventhub.exception.ResourceNotFoundException if the organizer does not exist
+     */
     @Transactional
     public EventResponseDTO createEvent(EventRequestDTO dto) {
         User organizer = userRepository.findById(dto.organizerId())
@@ -40,6 +48,9 @@ public class EventService {
         return mapper.toEventResponseDTO(event);
     }
 
+    /**
+     * Returns all events.
+     */
     @Transactional(readOnly = true)
     public List<EventResponseDTO> getAllEvents() {
         return eventRepository.findAll().stream()
@@ -47,6 +58,11 @@ public class EventService {
                 .toList();
     }
 
+    /**
+     * Returns a single event by id.
+     *
+     * @throws com.eventhub.exception.ResourceNotFoundException if no event matches the id
+     */
     @Transactional(readOnly = true)
     public EventResponseDTO getEventById(UUID id) {
         Event event = eventRepository.findById(id)

@@ -30,6 +30,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link EventService}, with repositories and mapper mocked out.
+ */
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
 
@@ -65,6 +68,10 @@ class EventServiceTest {
         );
     }
 
+    /**
+     * Verifies that creating an event looks up the organizer, persists an event built
+     * from the request fields, and returns the mapped response.
+     */
     @Test
     void createEvent_buildsEventWithOrganizerAndReturnsResponse() {
         when(userRepository.findById(organizer.getId())).thenReturn(Optional.of(organizer));
@@ -88,6 +95,10 @@ class EventServiceTest {
         assertThat(savedEvent.getOrganizer()).isEqualTo(organizer);
     }
 
+    /**
+     * Verifies that creating an event for a non-existent organizer fails fast without
+     * persisting anything.
+     */
     @Test
     void createEvent_throwsWhenOrganizerNotFound() {
         when(userRepository.findById(organizer.getId())).thenReturn(Optional.empty());
@@ -99,6 +110,9 @@ class EventServiceTest {
         verify(eventRepository, never()).save(any());
     }
 
+    /**
+     * Verifies that fetching an event by id returns the mapped response when found.
+     */
     @Test
     void getEventById_returnsMappedEvent() {
         Event event = Event.builder().id(UUID.randomUUID()).title("Tech Conference").organizer(organizer).build();
@@ -113,6 +127,9 @@ class EventServiceTest {
         assertThat(result).isEqualTo(expectedResponse);
     }
 
+    /**
+     * Verifies that fetching a non-existent event by id throws.
+     */
     @Test
     void getEventById_throwsWhenNotFound() {
         UUID id = UUID.randomUUID();
@@ -123,6 +140,9 @@ class EventServiceTest {
                 .hasMessageContaining(id.toString());
     }
 
+    /**
+     * Verifies that fetching all events returns the mapped list from the repository.
+     */
     @Test
     void getAllEvents_returnsMappedList() {
         Event event = Event.builder().id(UUID.randomUUID()).title("Tech Conference").organizer(organizer).build();

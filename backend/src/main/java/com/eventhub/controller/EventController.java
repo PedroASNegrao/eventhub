@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * REST endpoints for creating and reading events.
+ */
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
@@ -24,17 +27,26 @@ public class EventController {
 
     private final EventService eventService;
 
+    /**
+     * Creates a new event from the given request payload.
+     */
     @PostMapping
     public ResponseEntity<EventResponseDTO> createEvent(@Valid @RequestBody EventRequestDTO dto) {
         EventResponseDTO response = eventService.createEvent(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /**
+     * Returns all events.
+     */
     @GetMapping
     public ResponseEntity<List<EventResponseDTO>> getAllEvents() {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
 
+    /**
+     * Returns a single event by its id.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<EventResponseDTO> getEventById(@PathVariable UUID id) {
         return ResponseEntity.ok(eventService.getEventById(id));
