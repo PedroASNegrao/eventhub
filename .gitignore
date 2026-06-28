@@ -25,3 +25,4 @@ replay_pid*
 
 # Postgres data directory (Docker volumes)
 postgres_data/
+docs/

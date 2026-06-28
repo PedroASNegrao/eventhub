@@ -6,6 +6,8 @@ EventHub is a Spring Boot REST API for managing events and registrations, built 
 
 **Status:** User & Event CRUD complete. Spring Security + JWT authentication complete. Sessions & Registrations endpoints planned next.
 
+**Frontend Repository:** This backend API works together with the frontend at [`eventhub-front`](/home/pedro/projects/eventhub-front/). Deploy both together for the full-stack application.
+
 ## Run EventHub locally
 
 EventHub is a [Spring Boot](https://spring.io/guides/gs/spring-boot) application built with [Gradle](https://spring.io/guides/gs/gradle/), backed by PostgreSQL. Java 21 is required for the build, and Docker is required to run Postgres.
@@ -114,6 +116,28 @@ For validation errors (400):
 ```
 
 Errors follow this shape across all endpoints — `404` for missing resources, `409` for duplicate emails, `400` with field-level detail for validation failures — via `GlobalExceptionHandler`.
+
+## Screenshots
+
+### Postman — API requests
+
+**Create user** (`POST /api/users`):
+
+![Create user via Postman](images/01-post_api_users.png)
+
+**Login** (`POST /api/auth/login`) — returns an access/refresh token pair:
+
+![Login via Postman](images/02-post_api_auth_login.png)
+
+**Get event by ID** (`GET /api/events/{id}`):
+
+![Get event via Postman](images/03-api-events.png)
+
+### Database — entity-relationship diagram
+
+Schema as modeled in DBeaver, showing `users`, `events`, `sessions`, and `registrations` with their foreign-key relationships:
+
+![Database ER diagram](images/04-database_er_diagram.png)
 
 ## Architecture
 
